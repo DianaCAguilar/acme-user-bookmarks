@@ -1,7 +1,46 @@
 <html>
   <head>
 <style>
-
+  body {
+    font-family: verdana;
+    color: navy;
+    background-color: lavender;
+  }
+  h1 {
+    color: white;
+    text-align: center;
+    background-color: purple;
+    border-radius: 55px;
+    padding: 0.5rem;
+  }
+  form {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    border: navy 1px solid;
+  }
+  input, button {
+    margin: 0.3rem;
+    height: 2rem;
+  }
+  .bookmark {
+    display: flex;
+    justify-items: center;
+  }
+  li {
+    text-decoration: none;
+  }
+  .selected {
+    background-color: purple;
+    font-size: 2rem;
+  }
+  nav {
+    display: flex;
+    justify-content: space-around;
+  }
+  nav > * {
+    text-decoration: none;
+  }
 </style>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.js'></script>
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
@@ -12,8 +51,144 @@
   <body>
     <div id='root'></div>
     <script type='text/babel'>
-      const root = document.querySelector('#root');
-      ReactDOM.render(<hr />, root);
+
+    const API = 'https://acme-users-api-rev.herokuapp.com/api';
+    const { render } = ReactDOM
+    const { Component } = React
+    const { HashRouter, Route, Link, Switch, Redirect, NavLink } = ReactRouterDOM
+
+    const fetchUser = async ()=> {
+      const storage = window.localStorage
+      const userId = storage.getItem('userId') 
+      if(userId){
+        try {
+          return (await axios.get(`${API}/users/detail/${userId}`)).data
+        }
+        catch(ex){
+          storage.removeItem('userId')
+          return fetchUser()
+        }
+      }
+      const user = (await axios.get(`${API}/users/random`)).data
+      storage.setItem('userId', user.id)
+      return  user
+    };
+
+    const Bookmarks = ({ bookmarks, destroy, match}) => {
+      const category = match.params.category
+
+      return (
+        <ul>
+          {bookmarks
+            .filter((bookmark, idx) => bookmark.category === category)
+            .map((bookmark, idx) => {
+            return (
+              <div className='bookmark' key= {idx}>
+                  <li>
+                    {bookmark.url}
+                  </li>
+                  <button>Destroy</button>
+              </div>
+            )
+          })}  
+        </ul>
+      )
+    }
+
+    const Nav = ({ path, bookmarks }) => {
+      const categoryTabs = bookmarks
+      .filter((bookmark, idx) => {
+        const firstIdx = bookmarks.findIndex(bm => bm.category === bookmark.category)
+        return idx === firstIdx
+      })
+      .map(categoryTab => {        
+        const catLength = bookmarks.filter(bookmark => bookmark.category === categoryTab.category)
+        return (
+            <NavLink exact activeClassName="selected" to= { categoryTab.category } > {(categoryTab.category).toUpperCase()} ({catLength.length})</NavLink>  
+        )
+      })
+      return <nav>{categoryTabs}</nav>
+    }
+
+    class Create extends Component {
+      constructor() {
+        super()
+        this.state = {
+          bookmark: "",
+          category: ""
+        }
+        this.create = this.create.bind(this)
+      }
+      create(ev, ev2) {
+        ev.preventDefault()
+        this.props.create(this.state.bookmark, this.state.category)
+      }
+      render() {
+        return (
+          <form onSubmit= { (ev, ev2) => this.create(ev, ev2) }>
+              <input placeholder= 'url' onChange = { ev => this.setState({ bookmark: ev.target.value })}>
+              </input>
+              <input placeholder= 'category' onChange = { ev2 => this.setState({ category: ev2.target.value })}>
+              </input>
+              <button>Create</button>
+            </form>
+        )
+      }
+    }
+
+//NAV needs to have categories for the specific categories of the bookmarks?
+//map through user bookmarks and create a nav tab for each diff category? 
+
+    class App extends Component {
+      constructor() {
+        super()
+      
+        this.state = {
+          user: {},
+          bookmarks: []
+        }
+        this.create = this.create.bind(this)
+      }
+      async componentDidMount() {
+        const randUser = await fetchUser()
+        const userBookmarks = (await axios.get(`${API}/users/${randUser.id}/bookmarks`)).data
+        this.setState({
+          user: randUser,
+          bookmarks: userBookmarks
+        })
+      }
+      async create(bookmark, category) {
+        const { user } = this.state
+        const newBookmark = (await axios.post(`${API}/users/${user.id}/bookmarks`, {
+          category: category,
+          url: bookmark
+        })).data 
+        this.setState({ bookmarks: [...this.state.bookmarks, newBookmark] })
+      }
+      async destroy(bookmark) {
+        const { user, bookmarks } = this.state
+        const newBookmarks = await axios.delete(`${API}/users/${user.id}/bookmarks${bookmarks.id}`)
+        this.setState({ bookmarks: [...this.state.bookmarks, newBookmarks]})
+      }
+      
+      render() {
+        const { user, bookmarks } = this.state
+        const { create, destroy } = this
+        return (
+          <HashRouter>
+            <Nav bookmarks={ bookmarks }/>
+            <h1>{ user.fullName } ({ bookmarks.length } Bookmarks)</h1>
+            <Create create={ create }/>
+            <Route path= '/:category' render={(props)=> <Bookmarks bookmarks={ bookmarks } {...props}/>
+}/>
+          </HashRouter>
+        )
+      }
+    }
+
+    const root = document.querySelector('#root');
+    ReactDOM.render(<App />, root);
+
     </script>
   </body>
 </html>
