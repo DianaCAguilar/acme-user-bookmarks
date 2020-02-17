@@ -59,7 +59,7 @@
     <div id='root'></div>
     <script type='text/babel'>
 
-    const API = 'https://acme-users-api-rev.herokuapp.com/api';
+    const API = 'https://acme-users-api-rev.herokuapp.com/api'
     const { render } = ReactDOM
     const { Component } = React
     const { HashRouter, Route, Link, Switch, Redirect, NavLink } = ReactRouterDOM
@@ -79,7 +79,7 @@
       const user = (await axios.get(`${API}/users/random`)).data
       storage.setItem('userId', user.id)
       return  user
-    };
+    }
 
     const Bookmarks = ({ bookmarks, destroy, match}) => {
       const category = match.params.category
@@ -108,6 +108,7 @@
         const firstIdx = bookmarks.findIndex(bm => bm.category === bookmark.category)
         return idx === firstIdx
       })
+//not sure why activeClassName isn't working here, I looked up documentation
       .map((categoryTab, idx) => {        
         const catLength = bookmarks.filter(bookmark => bookmark.category === categoryTab.category)
         return (
@@ -172,10 +173,13 @@
       }
       async destroy(bookmark) {
         const { user, bookmarks } = this.state
-        const newBookmarks = (await axios.delete(`${API}/users/${user.id}/bookmarks/${bookmark.id}`)).data
-        this.setState({ bookmarks: [...this.state.bookmarks, newBookmarks]})
+        console.log(bookmark)
+        const newBookmarks = bookmarks.filter(bookmarkItem => bookmark.id !== bookmarkItem.id)
+        console.log(newBookmarks)
+        await axios.delete(`${API}/users/${user.id}/bookmarks/${bookmark.id}`)
+        this.setState({ bookmarks: newBookmarks })
       }
-      
+
       render() {
         const { user, bookmarks } = this.state
         const { create, destroy } = this
@@ -190,8 +194,8 @@
       }
     }
 
-    const root = document.querySelector('#root');
-    ReactDOM.render(<App />, root);
+    const root = document.querySelector('#root')
+    ReactDOM.render(<App />, root)
 
     </script>
   </body>
