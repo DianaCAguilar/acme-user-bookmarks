@@ -5,6 +5,7 @@
     font-family: verdana;
     color: navy;
     background-color: lavender;
+    align-content: center;
   }
   h1 {
     color: white;
@@ -25,10 +26,16 @@
   }
   .bookmark {
     display: flex;
-    justify-items: center;
+    justify-content: space-around;
+    border: 2px solid purple;
+    padding: 0.5rem;
+    align-items: center;
+    width: 80%;
+    margin: 20px 30px;
   }
   li {
-    text-decoration: none;
+    list-style-type: none;
+
   }
   .selected {
     background-color: purple;
@@ -87,7 +94,7 @@
                   <li>
                     {bookmark.url}
                   </li>
-                  <button>Destroy</button>
+                  <button onClick={() => destroy(bookmark)}>Destroy</button>
               </div>
             )
           })}  
@@ -101,10 +108,10 @@
         const firstIdx = bookmarks.findIndex(bm => bm.category === bookmark.category)
         return idx === firstIdx
       })
-      .map(categoryTab => {        
+      .map((categoryTab, idx) => {        
         const catLength = bookmarks.filter(bookmark => bookmark.category === categoryTab.category)
         return (
-            <NavLink exact activeClassName="selected" to= { categoryTab.category } > {(categoryTab.category).toUpperCase()} ({catLength.length})</NavLink>  
+            <NavLink key={idx} exact activeClassName="selected" to= {categoryTab.category ? categoryTab.category : '' } > {(categoryTab.category)} ({catLength.length})</NavLink>  
         )
       })
       return <nav>{categoryTabs}</nav>
@@ -136,9 +143,6 @@
       }
     }
 
-//NAV needs to have categories for the specific categories of the bookmarks?
-//map through user bookmarks and create a nav tab for each diff category? 
-
     class App extends Component {
       constructor() {
         super()
@@ -148,6 +152,7 @@
           bookmarks: []
         }
         this.create = this.create.bind(this)
+        this.destroy = this.destroy.bind(this)
       }
       async componentDidMount() {
         const randUser = await fetchUser()
@@ -167,7 +172,7 @@
       }
       async destroy(bookmark) {
         const { user, bookmarks } = this.state
-        const newBookmarks = await axios.delete(`${API}/users/${user.id}/bookmarks${bookmarks.id}`)
+        const newBookmarks = (await axios.delete(`${API}/users/${user.id}/bookmarks/${bookmark.id}`)).data
         this.setState({ bookmarks: [...this.state.bookmarks, newBookmarks]})
       }
       
@@ -179,8 +184,7 @@
             <Nav bookmarks={ bookmarks }/>
             <h1>{ user.fullName } ({ bookmarks.length } Bookmarks)</h1>
             <Create create={ create }/>
-            <Route path= '/:category' render={(props)=> <Bookmarks bookmarks={ bookmarks } {...props}/>
-}/>
+            <Route path= '/:category' render={(props)=> <Bookmarks destroy={ destroy } bookmarks={ bookmarks } {...props}/>}/>
           </HashRouter>
         )
       }
